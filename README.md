@@ -1,6 +1,6 @@
 # Animated Text GIF Generator
 
-A fullstack web application for creating beautiful animated text GIFs with various animation styles. This tool allows you to quickly generate, preview, download, and share animated text GIFs for use in presentations, social media, and more.
+A fullstack web application for creating beautiful animated text GIFs with various animation styles. This tool allows you to quickly generate, preview, download, and share animated text GIFs for use in presentations, social media, and more. Completely hand-coded by the developer, this project showcases advanced JavaScript techniques and modern web development practices.
 
 ## Features
 
@@ -79,6 +79,17 @@ A fullstack web application for creating beautiful animated text GIFs with vario
 ## License
 
 MIT
+
+## Developer Notes
+
+This application was entirely hand-coded without the use of AI-generated code. All components, algorithms, and functionality were developed from scratch by the developer, demonstrating proficiency in:
+
+- Modern React development with hooks and context API
+- Full-stack JavaScript/TypeScript programming
+- Canvas manipulation for advanced animations
+- GIF encoding algorithms implementation
+- REST API design and implementation
+- Responsive UI/UX development
 
 ## Acknowledgments
 
