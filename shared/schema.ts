@@ -16,20 +16,28 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
-// Animation types for GIF generator
-export type AnimationStyle = "fire" | "wave" | "fade" | "colorSpin" | "bounce";
+// Define animation styles enum
+export enum AnimationStyle {
+  Fire = "fire",
+  Wave = "wave",
+  Fade = "fade",
+  ColorSpin = "colorSpin",
+  Bounce = "bounce"
+}
 
-// GIF generator schemas
-export const generateGifSchema = z.object({
-  text: z.string().min(1).max(20),
-  animationStyle: z.enum(["fire", "wave", "fade", "colorSpin", "bounce"]),
+// Schema for GIF generation request
+export const gifGenerationSchema = z.object({
+  text: z.string().max(20, "Text must be at most 20 characters").min(1, "Text is required"),
+  animationStyle: z.nativeEnum(AnimationStyle, {
+    errorMap: (issue, ctx) => ({ message: "Invalid animation style" }),
+  }),
 });
 
-export type GenerateGifRequest = z.infer<typeof generateGifSchema>;
+export type GifGenerationRequest = z.infer<typeof gifGenerationSchema>;
 
-export const gifResponseSchema = z.object({
-  gifUrl: z.string(),
-  animationStyle: z.string(),
-});
-
-export type GifResponse = z.infer<typeof gifResponseSchema>;
+// GIF response type
+export type GifResponse = {
+  gifUrl: string;
+  animationStyle: AnimationStyle;
+  text: string;
+};

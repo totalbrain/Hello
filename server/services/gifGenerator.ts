@@ -1,211 +1,220 @@
-import fs from "fs";
-import path from "path";
 import { createCanvas } from "canvas";
 import GIFEncoder from "gifencoder";
+import path from "path";
+import fs from "fs";
+import { randomUUID } from "crypto";
 import { AnimationStyle } from "@shared/schema";
-import { v4 as uuidv4 } from "uuid";
 
-// Canvas configuration
-const WIDTH = 400;
-const HEIGHT = 200;
-const FONT_SIZE = 48;
-const FONT_FAMILY = "Arial";
-const BACKGROUND_COLOR = "#FFFFFF";
-const FRAMES = 60;
-const DELAY = 50; // ms
-
-// Function to generate GIF with the specified animation style
+// Function to generate a GIF with animated text
 export async function generateGif(text: string, animationStyle: AnimationStyle): Promise<string> {
-  // Create canvas
-  const canvas = createCanvas(WIDTH, HEIGHT);
-  const ctx = canvas.getContext("2d");
-  
-  // Create GIF encoder
-  const encoder = new GIFEncoder(WIDTH, HEIGHT);
-  
-  // Create a unique filename
-  const filename = `${uuidv4()}.gif`;
+  // Create a unique filename for the GIF
+  const filename = `${animationStyle}-${randomUUID()}.gif`;
   const outputPath = path.join(process.cwd(), "uploads", filename);
   
-  // Create a write stream for the GIF
+  // Canvas settings
+  const width = 400;
+  const height = 200;
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext("2d");
+  
+  // Initialize GIF encoder
+  const encoder = new GIFEncoder(width, height);
   const stream = fs.createWriteStream(outputPath);
   
-  // Pipe the GIF data to the file
+  // Start the encoder
   encoder.createReadStream().pipe(stream);
-  
-  // Start encoding
   encoder.start();
-  encoder.setRepeat(0); // 0 = loop forever
-  encoder.setDelay(DELAY);
-  encoder.setQuality(10); // 10 = best quality
+  encoder.setRepeat(0);  // 0 for repeat, -1 for no-repeat
+  encoder.setDelay(100); // Frame delay in ms
+  encoder.setQuality(10); // Image quality (lower = better compression)
   
-  // Setup text rendering
+  // Animation settings based on style
+  const frameCount = 20;
+  
+  // Base text settings
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `${FONT_SIZE}px ${FONT_FAMILY}`;
+  const fontSize = Math.min(60, 400 / (text.length * 0.7)); // Adaptive font size
+  ctx.font = `bold ${fontSize}px Arial, sans-serif`;
   
-  // Generate frames based on animation style
-  for (let frame = 0; frame < FRAMES; frame++) {
-    // Clear canvas
-    ctx.fillStyle = BACKGROUND_COLOR;
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    
-    // Apply animation based on selected style
-    switch (animationStyle) {
-      case "fire":
-        renderFireAnimation(ctx, text, frame);
-        break;
-      case "wave":
-        renderWaveAnimation(ctx, text, frame);
-        break;
-      case "fade":
-        renderFadeAnimation(ctx, text, frame);
-        break;
-      case "colorSpin":
-        renderColorSpinAnimation(ctx, text, frame);
-        break;
-      case "bounce":
-        renderBounceAnimation(ctx, text, frame);
-        break;
-      default:
-        renderDefaultAnimation(ctx, text, frame);
-    }
-    
-    // Add frame to GIF
-    encoder.addFrame(ctx);
+  // Animation styles
+  switch (animationStyle) {
+    case AnimationStyle.Fire:
+      generateFireAnimation(ctx, text, width, height, frameCount, encoder);
+      break;
+    case AnimationStyle.Wave:
+      generateWaveAnimation(ctx, text, width, height, frameCount, encoder);
+      break;
+    case AnimationStyle.Fade:
+      generateFadeAnimation(ctx, text, width, height, frameCount, encoder);
+      break;
+    case AnimationStyle.ColorSpin:
+      generateColorSpinAnimation(ctx, text, width, height, frameCount, encoder);
+      break;
+    case AnimationStyle.Bounce:
+      generateBounceAnimation(ctx, text, width, height, frameCount, encoder);
+      break;
+    default:
+      generateDefaultAnimation(ctx, text, width, height, frameCount, encoder);
   }
   
   // Finish encoding
   encoder.finish();
   
-  // Return the file path
+  // Return the path to the generated GIF
   return outputPath;
 }
 
-// Animation renderers
-function renderFireAnimation(ctx: any, text: string, frame: number) {
-  const centerX = WIDTH / 2;
-  const centerY = HEIGHT / 2;
+// Fire animation - gradient color that moves
+function generateFireAnimation(ctx: CanvasRenderingContext2D, text: string, width: number, height: number, frameCount: number, encoder: any) {
+  const colors = [
+    "#ff8a00", "#ff7000", "#ff5500", "#ff4000", "#ff0000",
+    "#ff2000", "#ff5500", "#ff7000", "#ff8a00"
+  ];
   
-  // Split text into characters
-  const chars = text.split("");
-  
-  // Calculate total width to center the whole text
-  const totalWidth = ctx.measureText(text).width;
-  let currentX = centerX - totalWidth / 2;
-  
-  // For each character
-  chars.forEach((char, i) => {
-    const charWidth = ctx.measureText(char).width;
+  for (let frame = 0; frame < frameCount; frame++) {
+    // Clear canvas
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, width, height);
     
-    // Fire colors
-    const r = 255;
-    const g = Math.max(0, 255 - (frame + i * 5) % 256);
-    const b = 0;
+    // Create gradient animation
+    const colorIndex = frame % colors.length;
+    const startColor = colors[colorIndex];
+    const endColor = colors[(colorIndex + 3) % colors.length];
     
-    // Flicker effect
-    const flicker = Math.sin((frame + i) * 0.2) * 0.2 + 0.8;
+    const gradient = ctx.createLinearGradient(0, 0, width, 0);
+    gradient.addColorStop(0, startColor);
+    gradient.addColorStop(1, endColor);
     
-    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${flicker})`;
+    ctx.fillStyle = gradient;
+    ctx.fillText(text, width / 2, height / 2);
     
-    // Draw with slight vertical offset for flame effect
-    const offset = Math.sin((frame + i * 10) * 0.1) * 5;
-    ctx.fillText(char, currentX + charWidth / 2, centerY + offset);
-    
-    currentX += charWidth;
-  });
+    encoder.addFrame(ctx);
+  }
 }
 
-function renderWaveAnimation(ctx: any, text: string, frame: number) {
-  const centerX = WIDTH / 2;
-  const centerY = HEIGHT / 2;
-  
-  // Split text into characters
-  const chars = text.split("");
-  
-  // Calculate total width to center the whole text
-  const totalWidth = ctx.measureText(text).width;
-  let currentX = centerX - totalWidth / 2;
-  
-  // For each character
-  chars.forEach((char, i) => {
-    const charWidth = ctx.measureText(char).width;
+// Wave animation - text moves up and down
+function generateWaveAnimation(ctx: CanvasRenderingContext2D, text: string, width: number, height: number, frameCount: number, encoder: any) {
+  for (let frame = 0; frame < frameCount; frame++) {
+    // Clear canvas
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, width, height);
     
-    // Wave colors (blue tones)
-    const r = 0;
-    const g = 120 + Math.sin(frame * 0.05 + i * 0.5) * 40;
-    const b = 255;
+    // Calculate vertical position based on sine wave
+    const amplitude = 20;
+    const frequency = 2 * Math.PI / frameCount;
+    const y = height / 2 + amplitude * Math.sin(frame * frequency);
     
-    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+    ctx.fillStyle = "#6366F1"; // Primary color
+    ctx.fillText(text, width / 2, y);
     
-    // Draw with wave effect
-    const waveHeight = 10;
-    const offset = Math.sin((frame * 0.1) + (i * 0.5)) * waveHeight;
-    ctx.fillText(char, currentX + charWidth / 2, centerY + offset);
-    
-    currentX += charWidth;
-  });
+    encoder.addFrame(ctx);
+  }
 }
 
-function renderFadeAnimation(ctx: any, text: string, frame: number) {
-  const centerX = WIDTH / 2;
-  const centerY = HEIGHT / 2;
-  
-  // Calculate opacity based on frame
-  const cycleLength = FRAMES / 2;
-  const cycle = frame % FRAMES;
-  const opacity = cycle < cycleLength 
-    ? cycle / cycleLength // Fade in
-    : 2 - (cycle / cycleLength); // Fade out
-  
-  // Set fill style with opacity
-  ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
-  
-  // Draw text
-  ctx.fillText(text, centerX, centerY);
+// Fade animation - text fades in and out
+function generateFadeAnimation(ctx: CanvasRenderingContext2D, text: string, width: number, height: number, frameCount: number, encoder: any) {
+  for (let frame = 0; frame < frameCount; frame++) {
+    // Clear canvas
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, width, height);
+    
+    // Calculate opacity based on sine wave (0.3 to 1)
+    const frequency = 2 * Math.PI / frameCount;
+    const opacity = 0.3 + 0.7 * Math.abs(Math.sin(frame * frequency));
+    
+    ctx.fillStyle = `rgba(99, 102, 241, ${opacity})`; // Primary color with varying opacity
+    ctx.fillText(text, width / 2, height / 2);
+    
+    encoder.addFrame(ctx);
+  }
 }
 
-function renderColorSpinAnimation(ctx: any, text: string, frame: number) {
-  const centerX = WIDTH / 2;
-  const centerY = HEIGHT / 2;
+// Color Spin animation - color changes in a cycle
+function generateColorSpinAnimation(ctx: CanvasRenderingContext2D, text: string, width: number, height: number, frameCount: number, encoder: any) {
+  const colors = [
+    "#6366F1", // Primary
+    "#8B5CF6", // Accent
+    "#EC4899", // Secondary
+    "#10B981", // Success
+    "#6366F1"  // Back to primary
+  ];
   
-  // Calculate hue for rainbow effect
-  const hue = (frame * 6) % 360;
-  
-  // Set fill style with HSL color
-  ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-  
-  // Draw text
-  ctx.fillText(text, centerX, centerY);
+  for (let frame = 0; frame < frameCount; frame++) {
+    // Clear canvas
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, width, height);
+    
+    // Calculate color interpolation
+    const colorIndex = Math.floor(frame / (frameCount / (colors.length - 1)));
+    const ratio = (frame % (frameCount / (colors.length - 1))) / (frameCount / (colors.length - 1));
+    
+    const startColor = hexToRgb(colors[colorIndex]);
+    const endColor = hexToRgb(colors[colorIndex + 1]);
+    
+    if (startColor && endColor) {
+      const r = Math.floor(startColor.r + ratio * (endColor.r - startColor.r));
+      const g = Math.floor(startColor.g + ratio * (endColor.g - startColor.g));
+      const b = Math.floor(startColor.b + ratio * (endColor.b - startColor.b));
+      
+      ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+      ctx.fillText(text, width / 2, height / 2);
+    }
+    
+    encoder.addFrame(ctx);
+  }
 }
 
-function renderBounceAnimation(ctx: any, text: string, frame: number) {
-  const centerX = WIDTH / 2;
-  
-  // Calculate bounce position
-  const bounceHeight = 40;
-  const cycle = frame % FRAMES;
-  const normalizedCycle = cycle / FRAMES;
-  
-  // Simulate bouncing with easing
-  const bounceY = HEIGHT / 2 + bounceHeight * Math.abs(Math.sin(normalizedCycle * Math.PI * 2));
-  
-  // Set fill style
-  ctx.fillStyle = "#000000";
-  
-  // Draw text
-  ctx.fillText(text, centerX, bounceY);
+// Bounce animation - text moves up and down
+function generateBounceAnimation(ctx: CanvasRenderingContext2D, text: string, width: number, height: number, frameCount: number, encoder: any) {
+  for (let frame = 0; frame < frameCount; frame++) {
+    // Clear canvas
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, width, height);
+    
+    // Calculate vertical position using a quadratic function for bounce effect
+    const normalizedFrame = frame % frameCount / frameCount;
+    let y;
+    
+    if (normalizedFrame < 0.5) {
+      // Going up (0 to 0.5)
+      const t = normalizedFrame * 2; // 0 to 1
+      y = height / 2 - 30 * Math.sin(t * Math.PI);
+    } else {
+      // Coming down (0.5 to 1)
+      const t = (normalizedFrame - 0.5) * 2; // 0 to 1
+      y = height / 2 - 30 * Math.sin((1 - t) * Math.PI);
+    }
+    
+    ctx.fillStyle = "#6366F1"; // Primary color
+    ctx.fillText(text, width / 2, y);
+    
+    encoder.addFrame(ctx);
+  }
 }
 
-function renderDefaultAnimation(ctx: any, text: string, frame: number) {
-  // Simple rotation animation as fallback
-  const centerX = WIDTH / 2;
-  const centerY = HEIGHT / 2;
-  
-  ctx.save();
-  ctx.translate(centerX, centerY);
-  ctx.rotate((frame * 2 * Math.PI) / FRAMES);
-  ctx.fillStyle = "#000000";
-  ctx.fillText(text, 0, 0);
-  ctx.restore();
+// Default animation (simple color change)
+function generateDefaultAnimation(ctx: CanvasRenderingContext2D, text: string, width: number, height: number, frameCount: number, encoder: any) {
+  for (let frame = 0; frame < frameCount; frame++) {
+    // Clear canvas
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, width, height);
+    
+    // Cycle through hue
+    const hue = (frame * 360 / frameCount) % 360;
+    ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+    ctx.fillText(text, width / 2, height / 2);
+    
+    encoder.addFrame(ctx);
+  }
+}
+
+// Helper function to convert hex color to RGB
+function hexToRgb(hex: string) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
 }

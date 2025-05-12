@@ -1,93 +1,49 @@
-import { useState } from "react";
-import TextInputForm from "@/components/TextInputForm";
-import LoadingState from "@/components/LoadingState";
-import ErrorMessage from "@/components/ErrorMessage";
-import ResultDisplay from "@/components/ResultDisplay";
-import { GifResult } from "@/lib/types";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import TextInput from "@/components/TextInput";
+import AnimationStyleSelector from "@/components/AnimationStyleSelector";
+import GifPreview from "@/components/GifPreview";
+import RecentGifs from "@/components/RecentGifs";
+import { Button } from "@/components/ui/button";
+import { VideoIcon } from "lucide-react";
+import { useGif } from "@/contexts/GifContext";
 
-const Home = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<GifResult | null>(null);
+export default function Home() {
+  const { generateGif } = useGif();
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      <div className="container mx-auto px-4 py-8 md:py-16">
-        {/* Header Section */}
-        <header className="text-center mb-12">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
-            Animated Text GIF Generator
-          </h1>
-          <p className="text-gray-600 max-w-xl mx-auto">
-            Create animated GIFs from your text with different effects like fire, wave, fade, color spin, and bounce.
-          </p>
-        </header>
-
-        {/* Main Content Area */}
-        <main className="max-w-3xl mx-auto">
-          {!isLoading && !result && !error && (
-            <TextInputForm 
-              onSubmit={(text, animationStyle) => {
-                setIsLoading(true);
-                setError(null);
-                fetch("/api/generate-gif", {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({ text, animationStyle }),
-                })
-                  .then((response) => {
-                    if (!response.ok) {
-                      throw new Error("Failed to generate GIF. Please try again.");
-                    }
-                    return response.json();
-                  })
-                  .then((data) => {
-                    setResult({
-                      url: data.gifUrl,
-                      downloadUrl: data.gifUrl,
-                      size: "400x200px",
-                      animationType: data.animationStyle,
-                    });
-                    setIsLoading(false);
-                  })
-                  .catch((err) => {
-                    setError(err.message);
-                    setIsLoading(false);
-                  });
-              }}
-            />
-          )}
-
-          {isLoading && <LoadingState />}
-
-          {error && (
-            <ErrorMessage 
-              error={error} 
-              onRetry={() => {
-                setError(null);
-              }} 
-            />
-          )}
-
-          {result && (
-            <ResultDisplay 
-              result={result} 
-              onCreateNew={() => {
-                setResult(null);
-              }}
-            />
-          )}
-        </main>
-
-        {/* Footer Section */}
-        <footer className="mt-16 text-center text-gray-500 text-sm pb-8">
-          <p>© {new Date().getFullYear()} Animated Text GIF Generator. All animations generated on-the-fly.</p>
-        </footer>
-      </div>
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      
+      <main className="container mx-auto px-4 py-6 md:py-10 flex-grow">
+        {/* GIF Generator */}
+        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="p-4 md:p-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">Create Your Animated Text GIF</h2>
+            
+            <TextInput />
+            
+            <AnimationStyleSelector />
+            
+            {/* Generate Button */}
+            <div className="flex justify-center mb-8">
+              <Button
+                onClick={generateGif}
+                className="px-6 py-6 bg-primary text-white font-medium rounded-lg shadow-sm hover:bg-primary/90 transition flex items-center h-10"
+              >
+                <VideoIcon className="mr-2 h-4 w-4" />
+                Generate GIF
+              </Button>
+            </div>
+            
+            <GifPreview />
+          </div>
+        </div>
+        
+        <RecentGifs />
+      </main>
+      
+      <Footer />
     </div>
   );
-};
-
-export default Home;
+}

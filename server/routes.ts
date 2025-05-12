@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import path from "path";
 import fs from "fs";
 import { generateGif } from "./services/gifGenerator";
-import { AnimationStyle } from "@shared/schema";
+import { AnimationStyle, gifGenerationSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Create uploads directory if it doesn't exist
@@ -16,23 +16,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API endpoint to generate GIF
   app.post("/api/generate-gif", async (req: Request, res: Response) => {
     try {
-      const { text, animationStyle } = req.body;
-
-      // Validate input
-      if (!text || typeof text !== "string") {
-        return res.status(400).json({ message: "Text is required" });
+      // Validate request using zod schema
+      const validationResult = gifGenerationSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: validationResult.error.errors[0]?.message || "Invalid request" 
+        });
       }
-
-      if (text.length > 20) {
-        return res.status(400).json({ message: "Text must be at most 20 characters" });
-      }
-
-      if (!animationStyle || !["fire", "wave", "fade", "colorSpin", "bounce"].includes(animationStyle)) {
-        return res.status(400).json({ message: "Invalid animation style" });
-      }
+      
+      const { text, animationStyle } = validationResult.data;
 
       // Generate GIF
-      const gifPath = await generateGif(text, animationStyle as AnimationStyle);
+      const gifPath = await generateGif(text, animationStyle);
       
       // Convert file path to URL
       const filename = path.basename(gifPath);
@@ -41,6 +37,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         gifUrl,
         animationStyle,
+        text
       });
     } catch (error) {
       console.error("Error generating GIF:", error);
